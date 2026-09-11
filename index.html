@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>Stat Tracker</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#E85D2C">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏀</text></svg>">
 
 <!--
@@ -442,9 +444,16 @@
     dbOk = ok;
     var dot = document.getElementById("syncDot");
     var lbl = document.getElementById("syncLabel");
+    if (!navigator.onLine){
+      dot.classList.add("off");
+      lbl.textContent = "Offline \u2014 saving on device";
+      return;
+    }
     if (ok){ dot.classList.remove("off"); lbl.textContent = "Synced"; }
     else { dot.classList.add("off"); lbl.textContent = db ? "Working locally" : "Local only (no sync)"; }
   }
+  window.addEventListener("online", function(){ markSynced(dbOk); });
+  window.addEventListener("offline", function(){ markSynced(dbOk); });
   function showBanner(msg){
     var b = document.getElementById("banner");
     b.textContent = msg;
@@ -505,6 +514,11 @@
     try {
       if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
       db = firebase.firestore();
+      try {
+        db.enablePersistence({synchronizeTabs: true}).catch(function(err){
+          console.warn("Offline persistence not enabled:", err && err.code);
+        });
+      } catch(e){ console.warn(e); }
     } catch(e){
       console.error(e);
       db = null;
@@ -1204,6 +1218,12 @@
     if (parts.length !== 3) return iso;
     var months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
     return months[(+parts[1]) - 1] + " " + (+parts[2]);
+  }
+
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function(){
+      navigator.serviceWorker.register("sw.js").catch(function(){});
+    });
   }
 
   init();
